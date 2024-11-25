@@ -4,7 +4,6 @@ module UtilsModule
 using Printf: @printf
 using MacroTools: splitdef
 using StyledStrings: StyledStrings
-using Symbolics
 
 macro ignore(args...) end
 
@@ -284,98 +283,6 @@ end
 dump_buffer(buffer::IOBuffer) = String(take!(buffer))
 function dump_buffer(buffer::AnnotatedIOBuffer)
     return AnnotatedString(dump_buffer(buffer.io), buffer.annotations)
-end
-
-function fnFromString(s)
-    f = eval(Meta.parse("x -> " * s))
-    return x -> Base.invokelatest(f, x)
-end
-
-function eval_limit(eq_str::String, var::String, val::Float64)
-
-    @syms x
-
-    if (occursin(var, eq_str))
-
-        new_eq_str = replace(eq_str, var => "x")
-
-        if (new_eq_str == "x")
-            return val
-        end
-        
-        f = fnFromString(new_eq_str)
-
-        
-        try
-            f_val = f(val)
-            if (f_val == NaN)
-                return limit(f(x), x, val)
-            else
-                return f_val
-            end
-        catch e
-            if e isa DomainError
-                return 10000  # a random large number
-            else
-                rethrow(e)
-            end
-        end
-    else
-        return 10000  # a random large number
-    end
-end
-
-function eval_derivative(eq_str::String, var::String, val::Float64)
-    
-    @syms x
-    @syms x1
-    
-    if (occursin(var, eq_str))
-
-        new_eq_str = replace(eq_str, var => "x")
-
-        if(eq_str == "x")
-            return NaN, 1
-        end
-        
-        f = fnFromString(new_eq_str)
-
-        try
-            deriv = repr(
-                expand_derivatives(
-                Differential(x)(eval(f)(x))))
-
-            if (occursin("x", deriv))
-                df = fnFromString(deriv)
-                
-                df_val = df(val)
-                if (df_val == NaN)
-                    return repr(df(x1)), limit(df(x), x, val)
-                else
-                    return repr(df(x1)), df_val
-                end
-            else
-                try
-                    return NaN, parse(Float64, simplify(deriv))
-                catch e
-                    if e isa ArgumentError
-                        return NaN, 10000
-                    else
-                        rethrow(e)
-                    end
-                end
-            end
-        catch e
-            if e isa DomainError
-                return NaN, 10000
-            else
-                rethrow(e)
-            end
-        end
-        
-    else
-        return NaN, 10000  # a random large number
-    end
 end
 
 end
