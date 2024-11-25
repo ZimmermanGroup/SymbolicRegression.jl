@@ -36,24 +36,24 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
         f2, lim2 = eval_derivative(eq_str, vrble, 0.0)
         lim_loss2 = abs(1 - lim2)
 
-        # if (f2 != NaN)
-        #     f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
-        #     lim_loss3 = abs(2 + lim3)
+        if (f2 != NaN)
+            f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
+            lim_loss3 = abs(2 + lim3)
 
-        #     if (f3 != NaN)
-        #         f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
-        #         lim_loss4 = abs(6 + lim4)
+            if (f3 != NaN)
+                f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
+                lim_loss4 = abs(6 + lim4)
 
-        #         return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
+                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
 
-        #     else
-        #         return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3
-        #     end
+            else
+                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3
+            end
 
-        # else
-        #     return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
-        # end
-        return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
+        else
+            return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
+        end
+        # return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
     else
         return sum((prediction .- dataset.y) .^ 2) / dataset.n + 10000
     end
@@ -65,11 +65,8 @@ X = Array{Float64}(X)
 X = reshape(X, 11,1)
 f = -X.^3/3 - X.^2/2 + X .+ 1
 
-# println((X))
-# println((f))
-
 model = SRRegressor(
-    niterations= 100,  # < Increase me for better results
+    niterations= 100,
     populations= 10,
     ncycles_per_iteration= 10,
     binary_operators=[+, *, /, -],
