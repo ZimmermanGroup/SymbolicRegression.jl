@@ -29,17 +29,16 @@ using Symbolics
         lim1 = eval_limit(eq_str, vrble, 0.0)
         lim_loss1 = abs(1 - lim1)
         
-
         f2, lim2 = eval_derivative(eq_str, vrble, 0.0)
         lim_loss2 = abs(1 - lim2)
 
         if (f2 != NaN)
             f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
-            lim_loss3 = abs(2 + lim3)
+            lim_loss3 = abs(1 + lim3)
 
             if (f3 != NaN)
                 f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
-                lim_loss4 = abs(6 + lim4)
+                lim_loss4 = abs(2 + lim4)
 
                 return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
 
