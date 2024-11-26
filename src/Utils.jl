@@ -304,12 +304,13 @@ function eval_limit(eq_str::String, var::String, val::Float64)
         end
         
         f = fnFromString(new_eq_str)
-
         
         try
             f_val = f(val)
+            fn_value_x = f(x)
+
             if (f_val == NaN)
-                return limit(f(x), x, val)
+                return limit(fn_value_x, x, val)
             else
                 return f_val
             end
@@ -323,6 +324,19 @@ function eval_limit(eq_str::String, var::String, val::Float64)
     else
         return 10000  # a random large number
     end
+end
+
+function get_deriv_from_fn_string(f::String)
+
+    @syms x
+
+    g = fnFromString(f)
+
+    deriv = repr(
+        expand_derivatives(
+        Differential(x)(eval(g)(x))))
+
+    return deriv
 end
 
 function eval_derivative(eq_str::String, var::String, val::Float64)
@@ -341,18 +355,18 @@ function eval_derivative(eq_str::String, var::String, val::Float64)
         f = fnFromString(new_eq_str)
 
         try
-            deriv = repr(
-                expand_derivatives(
-                Differential(x)(eval(f)(x))))
+            deriv = get_deriv_from_fn_string(repr(f(x)))
 
             if (occursin("x", deriv))
                 df = fnFromString(deriv)
                 
                 df_val = df(val)
+                df_x = df(x)
+                df_x1 = df(x1)
                 if (df_val == NaN)
-                    return repr(df(x1)), limit(df(x), x, val)
+                    return repr(df_x1), limit(df_x, x, val)
                 else
-                    return repr(df(x1)), df_val
+                    return repr(df_x1), df_val
                 end
             else
                 try
