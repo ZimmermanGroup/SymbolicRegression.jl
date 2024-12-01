@@ -1,14 +1,18 @@
+using Profile
 using SymbolicRegression
 
 using DynamicExpressions: string_tree
-include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/src/Utils.jl")
-import .UtilsModule: eval_limit, eval_derivative
 using Symbolics
 
-import SymbolicRegression: SRRegressor
+import SymbolicRegression: SRRegressor, UtilsModule
+import .UtilsModule: eval_limit, eval_derivative
 import MLJ: machine, fit!, predict, report
 
 function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
+    @profile mse_loss(tree, dataset, options)
+end
+
+function my_custom_objective_real(tree, dataset::Dataset{T,L}, options)::L where {T,L}
         
     prediction, flag = eval_tree_array(tree, dataset.X, options)
     if !flag
@@ -79,17 +83,23 @@ f = -X.^3/3 - X.^2/2 + X .+ 1
 
 model = SRRegressor(
     niterations= 100,
-    populations= 10,
-    ncycles_per_iteration= 10,
+    populations= 2,
+    ncycles_per_iteration= 2,
     binary_operators=[+, *, /, -],
     # unary_operators=[],
     maxsize=20,
     # procs=16,
-    parallelism=:multithreading,
+    # parallelism=:multithreading,
     loss_function=my_custom_objective,
 )
 
 mach = machine(model, X, f, scitype_check_level=0)
+Profile.init(delay=0.005)
 fit!(mach)
+open("profile_output.txt", "w") do f
+    Profile.print(IOContext(f, :displaysize => (24, 500)))
+    # Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=10, maxdepth=10)
+end
+Profile.clear()
 report(mach)
 predict(mach, X)
