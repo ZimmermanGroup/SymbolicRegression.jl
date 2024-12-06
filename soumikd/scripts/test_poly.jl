@@ -1,12 +1,17 @@
+using Profile
 using SymbolicRegression
 
 using DynamicExpressions: string_tree
-include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/src/Utils.jl")
-import .UtilsModule: eval_limit, eval_derivative
 using Symbolics
 
-import SymbolicRegression: SRRegressor
+import SymbolicRegression: SRRegressor, UtilsModule
+import .UtilsModule: eval_limit, eval_derivative
 import MLJ: machine, fit!, predict, report
+
+function my_custom_profiling_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
+    # @profile mse_loss(tree, dataset, options)
+    @profile my_custom_objective(tree, dataset, options)
+end
 
 function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
         
@@ -78,18 +83,29 @@ X = reshape(X, 11,1)
 f = -X.^3/3 - X.^2/2 + X .+ 1
 
 model = SRRegressor(
-    niterations= 100,
-    populations= 10,
-    ncycles_per_iteration= 10,
-    binary_operators=[+, *, /, -],
+    niterations= 1,
+    populations= 2,
+    # population_size= 3,
+    ncycles_per_iteration= 1,
+    # binary_operators=[+, *, /, -],
+    binary_operators=[+, *, -],
     # unary_operators=[],
-    maxsize=20,
+    maxsize=8,
     # procs=16,
     parallelism=:multithreading,
     loss_function=my_custom_objective,
+    # loss_function=mse_loss,
 )
 
 mach = machine(model, X, f, scitype_check_level=0)
-fit!(mach)
+Profile.init(delay=0.1)
+# using ProfileView
+# ProfileView.view()
+@profile fit!(mach)
+open("profile_output.txt", "w") do f
+    Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=100)
+    # Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=10, maxdepth=10)
+end
+Profile.clear()
 report(mach)
 predict(mach, X)

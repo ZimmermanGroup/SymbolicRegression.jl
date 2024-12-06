@@ -1,0 +1,14 @@
+[project]
+channels = ["conda-forge"]
+name = "SymbolicRegression.jl"
+platforms = ["linux-64"]
+
+[tasks.test]
+cwd = "soumikd/scripts"
+cmd = "julia --project test_poly.jl"
+
+[tasks.test-parallel]
+cwd = "soumikd/scripts"
+cmd = "julia --project --threads 16 test_poly.jl"
+
+[dependencies]
