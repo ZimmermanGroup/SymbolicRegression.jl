@@ -9,7 +9,8 @@ import .UtilsModule: eval_limit, eval_derivative
 import MLJ: machine, fit!, predict, report
 
 function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
-    @profile mse_loss(tree, dataset, options)
+    # @profile mse_loss(tree, dataset, options)
+    @profile my_custom_objective_real(tree, dataset, options)
 end
 
 function my_custom_objective_real(tree, dataset::Dataset{T,L}, options)::L where {T,L}
@@ -82,19 +83,22 @@ X = reshape(X, 11,1)
 f = -X.^3/3 - X.^2/2 + X .+ 1
 
 model = SRRegressor(
-    niterations= 100,
+    niterations= 2,
     populations= 2,
+    # population_size= 3,
     ncycles_per_iteration= 2,
     binary_operators=[+, *, /, -],
     # unary_operators=[],
     maxsize=20,
     # procs=16,
-    # parallelism=:multithreading,
+    parallelism=:multithreading,
     loss_function=my_custom_objective,
 )
 
 mach = machine(model, X, f, scitype_check_level=0)
 Profile.init(delay=0.005)
+# using ProfileView
+# ProfileView.view()
 fit!(mach)
 open("profile_output.txt", "w") do f
     Profile.print(IOContext(f, :displaysize => (24, 500)))
