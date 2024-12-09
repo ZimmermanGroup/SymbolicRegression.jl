@@ -291,86 +291,72 @@ function fnFromString(s)
     return x -> Base.invokelatest(f, x)
 end
 
-function eval_limit(eq_str::String, var::String, val::Float64)
+function eval_limit(f::Function, val::Float64)
 
     @syms x
+    var = "x"
 
-    if (occursin(var, eq_str))
-
-        new_eq_str = replace(eq_str, var => "x")
-
-        if (new_eq_str == "x")
-            return val
-        end
-        
-        f = fnFromString(new_eq_str)
-        
+    # if (occursin(var, eq_str))
         try
             f_val = f(val)
-            fn_value_x = f(x)
-
+            
             if (f_val == NaN)
+                fn_value_x = f(x)
                 return limit(fn_value_x, x, val)
             else
                 return f_val
             end
         catch e
             if e isa DomainError
-                return 10000  # a random large number
+                return 10000  # an arbitrary large number
             else
                 rethrow(e)
             end
         end
-    else
-        return 10000  # a random large number
-    end
+    # else
+    #     return 10000  # an arbitrary large number
+    # end
 end
 
-function get_deriv_from_fn_string(f::String)
+function get_deriv_from_fn(f::Function)
 
     @syms x
 
-    g = fnFromString(f)
+    # g = fnFromString(f)
 
-    deriv = repr(
-        expand_derivatives(
-        Differential(x)(eval(g)(x))))
-
-    return deriv
+    deriv = expand_derivatives(Differential(x)(eval(f)(x)))
+    return build_function(deriv, x, expression=Val{false})
 end
 
-function eval_derivative(eq_str::String, var::String, val::Float64)
+function eval_derivative(f::Function, val::Float64)
     
     @syms x
-    @syms x1
     
-    if (occursin(var, eq_str))
+    # if (occursin(var, eq_str))
 
-        new_eq_str = replace(eq_str, var => "x")
+        # new_eq_str = replace(eq_str, var => "x")
 
-        if(eq_str == "x")
-            return NaN, 1
-        end
+        # if(eq_str == "x")
+        #     return NaN, 1
+        # end
         
-        f = fnFromString(new_eq_str)
+        # f = fnFromString(new_eq_str)
 
         try
-            deriv = get_deriv_from_fn_string(repr(f(x)))
+            df = get_deriv_from_fn(f)
 
-            if (occursin("x", deriv))
-                df = fnFromString(deriv)
+            if (occursin("x", repr(df)))
                 
                 df_val = df(val)
                 df_x = df(x)
-                df_x1 = df(x1)
                 if (df_val == NaN)
-                    return repr(df_x1), limit(df_x, x, val)
+                    return repr(df_x), limit(df_x, x, val)
                 else
-                    return repr(df_x1), df_val
+                    return repr(df_x), df_val
                 end
             else
                 try
-                    return NaN, parse(Float64, simplify(deriv))
+                    return NaN, parse(Float64, @show simplify(df))
                 catch e
                     if e isa ArgumentError
                         return NaN, 10000
@@ -387,9 +373,9 @@ function eval_derivative(eq_str::String, var::String, val::Float64)
             end
         end
         
-    else
-        return NaN, 10000  # a random large number
-    end
+    # else
+    #     return NaN, 10000  # a random large number
+    # end
 end
 
 end
