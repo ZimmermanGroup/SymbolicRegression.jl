@@ -5,7 +5,7 @@ using DynamicExpressions: string_tree
 using Symbolics
 
 import SymbolicRegression: SRRegressor, UtilsModule
-import .UtilsModule: eval_limit, eval_derivative
+import .UtilsModule: eval_limit, eval_derivative, fnFromString
 import MLJ: machine, fit!, predict, report
 
 function my_custom_profiling_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
@@ -25,6 +25,9 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
 
     vrble = "x1"
 
+    eq_str = replace(eq_str, vrble => "x")
+    vrble = "x"
+
     prediction_loss = mse_loss(tree, dataset, options)
 
     lambda1 = 1000
@@ -34,30 +37,32 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
 
     if (occursin(vrble, eq_str))
 
-        lim1 = eval_limit(eq_str, vrble, 0.0)
+        f = fnFromString(eq_str)
+
+        lim1 = eval_limit(f, 0.0)
         lim_loss1 = abs(1 - lim1)
         
-        f2, lim2 = eval_derivative(eq_str, vrble, 0.0)
+        f2, lim2 = eval_derivative(f, 0.0)
         lim_loss2 = abs(1 - lim2)
 
-        if (f2 != NaN)
-            f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
-            lim_loss3 = abs(1 + lim3)
+        # if (f2 != NaN)
+        #     f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
+        #     lim_loss3 = abs(1 + lim3)
 
-            if (f3 != NaN)
-                f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
-                lim_loss4 = abs(2 + lim4)
+        #     if (f3 != NaN)
+        #         f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
+        #         lim_loss4 = abs(2 + lim4)
 
-                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
+        #         return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
 
-            else
-                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3
-            end
+        #     else
+        #         return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3
+        #     end
 
-        else
-            return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
-        end
-        # return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
+        # else
+        #     return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
+        # end
+        return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
     else
         return prediction_loss + 10000
     end
@@ -103,8 +108,7 @@ Profile.init(delay=0.1)
 # ProfileView.view()
 @profile fit!(mach)
 open("profile_output.txt", "w") do f
-    Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=100)
-    # Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=10, maxdepth=10)
+    Profile.print(IOContext(f, :displaysize => (24, 500)), mincount=100, maxdepth=100)
 end
 Profile.clear()
 report(mach)
