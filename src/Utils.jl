@@ -5,6 +5,8 @@ using Printf: @printf
 using MacroTools: splitdef
 using StyledStrings: StyledStrings
 using Symbolics
+using SymbolicUtils
+using SymbolicRegression
 
 macro ignore(args...) end
 
@@ -291,38 +293,25 @@ function fnFromString(s)
     return x -> Base.invokelatest(f, x)
 end
 
-function eval_limit(eq_str::String, var::String, val::Float64)
+function eval_limit(f, val, options)
 
-    @syms x
+    @syms x1
 
-    if (occursin(var, eq_str))
+    try
+        h = symbolic_to_node(f, options; variable_names=["x1"])
+        f_val = eval_tree_array(h, reshape(Array{Float32}([val]), 1, 1), options)[1][1]
 
-        new_eq_str = replace(eq_str, var => "x")
-
-        if (new_eq_str == "x")
-            return val
+        if (f_val == NaN)
+            return limit(eval(f)(x1), x1, val)
+        else
+            return f_val
         end
-        
-        f = fnFromString(new_eq_str)
-        
-        try
-            f_val = f(val)
-            fn_value_x = f(x)
-
-            if (f_val == NaN)
-                return limit(fn_value_x, x, val)
-            else
-                return f_val
-            end
-        catch e
-            if e isa DomainError
-                return 10000  # a random large number
-            else
-                rethrow(e)
-            end
+    catch e
+        if e isa DomainError
+            return 10000  # a random large number
+        else
+            rethrow(e)
         end
-    else
-        return 10000  # a random large number
     end
 end
 
@@ -337,59 +326,6 @@ function get_deriv_from_fn_string(f::String)
         Differential(x)(eval(g)(x))))
 
     return deriv
-end
-
-function eval_derivative(eq_str::String, var::String, val::Float64)
-    
-    @syms x
-    @syms x1
-    
-    if (occursin(var, eq_str))
-
-        new_eq_str = replace(eq_str, var => "x")
-
-        if(eq_str == "x")
-            return NaN, 1
-        end
-        
-        f = fnFromString(new_eq_str)
-
-        try
-            deriv = get_deriv_from_fn_string(repr(f(x)))
-
-            if (occursin("x", deriv))
-                df = fnFromString(deriv)
-                
-                df_val = df(val)
-                df_x = df(x)
-                df_x1 = df(x1)
-                if (df_val == NaN)
-                    return repr(df_x1), limit(df_x, x, val)
-                else
-                    return repr(df_x1), df_val
-                end
-            else
-                try
-                    return NaN, parse(Float64, simplify(deriv))
-                catch e
-                    if e isa ArgumentError
-                        return NaN, 10000
-                    else
-                        rethrow(e)
-                    end
-                end
-            end
-        catch e
-            if e isa DomainError
-                return NaN, 10000
-            else
-                rethrow(e)
-            end
-        end
-        
-    else
-        return NaN, 10000  # a random large number
-    end
 end
 
 end
