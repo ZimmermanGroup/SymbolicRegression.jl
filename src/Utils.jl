@@ -288,20 +288,14 @@ function dump_buffer(buffer::AnnotatedIOBuffer)
     return AnnotatedString(dump_buffer(buffer.io), buffer.annotations)
 end
 
-function fnFromString(s)
-    f = eval(Meta.parse("x -> " * s))
-    return x -> Base.invokelatest(f, x)
-end
-
-function eval_limit(f, val, options)
-
+function eval_limit(tree, val, options)
     @syms x1
 
     try
-        h = symbolic_to_node(f, options; variable_names=["x1"])
-        f_val = eval_tree_array(h, reshape(Array{Float32}([val]), 1, 1), options)[1][1]
+        f_val = eval_tree_array(tree, reshape(Array{Float64}([val]), 1, 1), options)[1][1]
 
         if (f_val == NaN)
+            f = node_to_symbolic(tree, options; variable_names=["x1"], index_functions=true)
             return limit(eval(f)(x1), x1, val)
         else
             return f_val
@@ -313,19 +307,31 @@ function eval_limit(f, val, options)
             rethrow(e)
         end
     end
+    
 end
 
-function get_deriv_from_fn_string(f::String)
+function eval_derivative(tree, val, options)
+    try
+        operators = OperatorEnum(; binary_operators=options.operators.binops, 
+                                       unary_operators=options.operators.unaops)
+        variable_names = ["x1"]
+        x1 = (Expression(Node{Float64}(feature=1); operators, variable_names))
 
-    @syms x
+        f = Expression(tree; operators, variable_names)
+        df_val = D(f, 1)([val]')[1][1]
 
-    g = fnFromString(f)
-
-    deriv = repr(
-        expand_derivatives(
-        Differential(x)(eval(g)(x))))
-
-    return deriv
+        if (df_val == NaN)
+            return 10000
+        else
+            return df_val
+        end
+    catch e
+        if e isa DomainError
+            return 10000  # a random large number
+        else
+            rethrow(e)
+        end
+    end
 end
 
 end
