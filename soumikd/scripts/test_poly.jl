@@ -6,6 +6,7 @@ include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/test/test_param
 import .UtilsModule: eval_limit, eval_derivative
 using Symbolics
 using SymbolicUtils
+using DynamicDiff, DynamicExpressions
 
 import SymbolicRegression: SRRegressor
 import MLJ: machine, fit!, predict, report

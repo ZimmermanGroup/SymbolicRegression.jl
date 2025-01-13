@@ -7,6 +7,7 @@ using StyledStrings: StyledStrings
 using Symbolics
 using SymbolicUtils
 using SymbolicRegression
+using DynamicDiff, DynamicExpressions
 
 macro ignore(args...) end
 
