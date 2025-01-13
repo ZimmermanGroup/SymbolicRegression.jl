@@ -1,70 +1,61 @@
 using SymbolicRegression
 
-using DynamicExpressions: string_tree
 include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/src/Utils.jl")
-import .UtilsModule: eval_limit, eval_derivative
+include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/test/test_params.jl")
+
 using Symbolics
+using SymbolicUtils
+using DynamicDiff
+using DynamicExpressions: OperatorEnum
 
-@time function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
-        
-    prediction, flag = eval_tree_array(tree, dataset.X, options)
-    if !flag
-            return L(Inf)
-    end
-    
-    eq_str = string_tree(tree, options)
-    # print(eq_str)
+_inv(x) = 1 / x
+options = Options(;
+default_params...,
+binary_operators=(+, *, ^, /),
+unary_operators=(_inv,),
+constraints=(_inv => 4,),
+populations=4,
+)
+println(options.operators.unaops)
+println(options.operators.binops)
 
-    vrble = "x1"
+@extend_operators options
+tree = Node(1, (^)(Node(; val=3.0) * Node(1, Node("x1")), 2.0), Node(; val=-1.2))
+tree2 = Node(1, (^)(Node(; val=5.0) * Node(1, Node("x1")), 2.0), Node(; val=-1.2))
 
-    prediction_loss = mse_loss(tree, dataset, options)
+@time f = node_to_symbolic(tree, options; variable_names=["x1"], index_functions=true)
+@time g = node_to_symbolic(tree2, options; variable_names=["x1"], index_functions=true)
 
-    lambda1 = 1000
-    lambda2 = 1000
-    lambda3 = 1000
-    lambda4 = 1000
+# @syms x1 y t
+# @time g = build_function(f, x1)
+# @time eval(g)(1)
+# @time eval(g)(1)
+# println(eval(g)(1))
 
-    if (occursin(vrble, eq_str))
+# h(t) = sin(t)/t
+# @time limit(h, t, 0)
+# @time g(1)
+# @time occursin("x1", repr(f))
 
-        lim1 = eval_limit(eq_str, vrble, 0.0)
-        lim_loss1 = abs(1 - lim1)
-        
-        f2, lim2 = eval_derivative(eq_str, vrble, 0.0)
-        lim_loss2 = abs(1 - lim2)
+@time eval_tree_array(tree, reshape(Array{Float64}([1.0]), 1, 1), options)
+@time eval_tree_array(tree2, reshape(Array{Float64}([1.0]), 1, 1), options)
+# println(value)
 
-        if (f2 != NaN)
-            f3, lim3 = eval_derivative(repr(f2), vrble, 0.0)
-            lim_loss3 = abs(1 + lim3)
+@time h = symbolic_to_node(f, options; variable_names=["x1"])
+@time p = symbolic_to_node(g, options; variable_names=["x1"])
 
-            if (f3 != NaN)
-                f4, lim4 = eval_derivative(repr(f3), vrble, 0.0)
-                lim_loss4 = abs(2 + lim4)
 
-                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3 + lambda4*lim_loss4
+@time eval_tree_array(h, reshape(Array{Float32}([1.0]), 1, 1), options)
+@time eval_tree_array(p, reshape(Array{Float32}([1.0]), 1, 1), options)[1]
 
-            else
-                return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2 + lambda3*lim_loss3
-            end
+operators = OperatorEnum(; binary_operators=(+, *, /, -, ^), unary_operators=(sin, cos));
+variable_names = ["x1"];
+x1 = (Expression(Node{Float64}(feature=1); operators, variable_names))
 
-        else
-            return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
-        end
-        # return prediction_loss + lambda1*lim_loss1 + lambda2*lim_loss2
-    else
-        return prediction_loss + 10000
-    end
+q = Expression(tree2; operators, variable_names)
 
-end
+# println(typeof(x1))
+# println(typeof(q))
+# println(typeof(2^x1))
 
-@time function mse_loss(tree, dataset::Dataset{T,L}, options)::L where {T,L}
-        
-    prediction, flag = eval_tree_array(tree, dataset.X, options)
-    if !flag
-            return L(Inf)
-    end
-
-    mse_loss = sum((prediction .- dataset.y) .^ 2) / dataset.n
-
-    return mse_loss
-
-end
+@time D(q, 1)([1]')[1][1]
