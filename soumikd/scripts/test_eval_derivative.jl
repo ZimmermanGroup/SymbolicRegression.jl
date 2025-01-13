@@ -3,21 +3,25 @@ include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/src/Utils.jl")
 include("/home/soumikd/symbolic_regression/SymbolicRegression.jl/test/test_params.jl")
 using Symbolics
 using SymbolicUtils
+using DynamicDiff, DynamicExpressions
 
 import SymbolicRegression: SRRegressor
 import MLJ: machine, fit!, predict, report
 
-function eval_limit(tree, val, options)
-    @syms x1
-
+function eval_derivative(tree, val, options)
     try
-        f_val = eval_tree_array(tree, reshape(Array{Float64}([val]), 1, 1), options)[1][1]
+        operators = OperatorEnum(; binary_operators=options.operators.binops, 
+                                       unary_operators=options.operators.unaops)
+        variable_names = ["x1"]
+        x1 = (Expression(Node{Float64}(feature=1); operators, variable_names))
 
-        if (f_val == NaN)
-            f = node_to_symbolic(tree, options; variable_names=["x1"], index_functions=true)
-            return limit(eval(f)(x1), x1, val)
+        f = Expression(tree; operators, variable_names)
+        df_val = D(f, 1)([val]')[1][1]
+
+        if (df_val == NaN)
+            return 10000
         else
-            return f_val
+            return df_val
         end
     catch e
         if e isa DomainError
@@ -26,7 +30,6 @@ function eval_limit(tree, val, options)
             rethrow(e)
         end
     end
-    
 end
 
 function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L}
@@ -40,7 +43,7 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
 
     if (occursin("x1", repr(tree)))
 
-        lim1 = eval_limit(tree, 0.0, options)
+        lim1 = eval_derivative(tree, 0.0, options)
         lim_loss1 = abs(1 - lim1)
 
         return prediction_loss + 10*lim_loss1
