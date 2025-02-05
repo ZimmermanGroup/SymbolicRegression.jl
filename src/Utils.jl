@@ -319,9 +319,9 @@ function eval_derivative(tree, val, options)
         x1 = (Expression(Node{Float64}(feature=1); operators, variable_names))
 
         f = Expression(tree; operators, variable_names)
-        df_val = D(f, 1)([val]')[1][1]
+        df_val = D(f, 1)(val')
 
-        if (df_val == NaN)
+        if (NaN in df_val)
             return 10000
         else
             return df_val

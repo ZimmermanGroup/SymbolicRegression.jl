@@ -16,9 +16,9 @@ function eval_derivative(tree, val, options)
         x1 = (Expression(Node{Float64}(feature=1); operators, variable_names))
 
         f = Expression(tree; operators, variable_names)
-        df_val = D(f, 1)([val]')[1][1]
+        df_val = D(f, 1)(val')
 
-        if (df_val == NaN)
+        if (NaN in df_val)
             return 10000
         else
             return df_val
@@ -43,8 +43,8 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
 
     if (occursin("x1", repr(tree)))
 
-        lim1 = eval_derivative(tree, 0.0, options)
-        lim_loss1 = abs(1 - lim1)
+        lim1 = eval_derivative(tree, [0.0, 1.0], options)
+        lim_loss1 = abs(sum([1, -1] .- lim1))
 
         return prediction_loss + 10*lim_loss1
     else
