@@ -27,7 +27,7 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
         lim_loss1 = abs(1 - lim1)
         lim_loss2 = abs(1 - lim2)
 
-        return prediction_loss + 10*lim_loss1
+        return prediction_loss + 10*lim_loss1 + 10*lim_loss2
     else
         return prediction_loss + 100000
     end
@@ -47,13 +47,13 @@ function mse_loss(tree, dataset::Dataset{T,L}, options)::L where {T,L}
 
 end
 
-X = [100:110;]
+X = range(100, 110, 11) |> collect
 X = Array{Float64}(X)
 X = reshape(X, 11, 1)
 f = -X.^3/3 - X.^2/2 + X .+ 1
 
 model = SRRegressor(
-    niterations= 100,
+    niterations= 1000,
     populations= 10,
     ncycles_per_iteration= 10,
     binary_operators=(+, *, /, -,),
@@ -62,6 +62,7 @@ model = SRRegressor(
     # procs=16,
     parallelism=:multithreading,
     loss_function=my_custom_objective,
+    # loss_function=mse_loss,
 )
 
 mach = machine(model, X, f, scitype_check_level=0)
