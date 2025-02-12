@@ -30,8 +30,7 @@ function my_custom_objective(tree, dataset::Dataset{T,L}, options)::L where {T,L
         end
 
         rho_symbolic = node_to_symbolic(tree, options; variable_names=["x1"], index_functions=true)
-
-        # check the limit of exc at infinity to be -1/2r
+        
         @syms x1
         println(rho_symbolic)
         println(safe_pow(x1, 2)*rho_symbolic)
